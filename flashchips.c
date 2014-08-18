@@ -5468,6 +5468,39 @@ const struct flashchip flashchips[] = {
 	},
 
 	{
+		.vendor = "Macronix",
+		.name = "MX66L51235F",
+		.bustype = BUS_SPI,
+		.manufacture_id = MACRONIX_ID,
+		.model_id = 0x201a,
+		.total_size = 65536,
+		.page_size = 256,
+		/* MX66L51235F has 512B of OTP; enter 0xB1, exit 0xC1 */
+		.feature_bits = FEATURE_WRSR_WREN /* TODO: | FEATURE_OTP*/,
+		.tested = TEST_OK_PREW,
+		.probe = probe_spi_rdid,
+		.probe_timing = TIMING_ZERO,
+		.block_erasers =
+		{
+			{
+				.eraseblocks = { {64 * 1024, 1024} },
+				.block_erase = spi_block_erase_dc,
+			}, {
+				.eraseblocks = { {64 * 1024 * 1024, 1} },
+				.block_erase = spi_block_erase_60,
+			}, {
+				.eraseblocks = { {64 * 1024 * 1024, 1} },
+				.block_erase = spi_block_erase_c7,
+			}
+		},
+		.printlock = NULL,  /* TODO */
+		.unlock = spi_disable_blockprotect,
+		.write = spi_chip_write_256_4b,
+		.read = spi_chip_read_4b,
+		.voltage = { 2700, 3600 },
+	},
+
+	{
 		.vendor		= "Macronix",
 		.name		= "MX29F040",
 		.bustype	= BUS_PARALLEL,

@@ -663,6 +663,51 @@ int spi_block_erase_d7(struct flashctx *flash, unsigned int addr, unsigned int b
 	return 0;
 }
 
+/* Block size is usually 64k */
+int spi_block_erase_dc(struct flashctx *flash, unsigned int addr, unsigned int blocklen)
+{
+	int result;
+	struct spi_command cmds[] = {
+		{
+			.writecnt = JEDEC_WREN_OUTSIZE,
+			.writearr = (const unsigned char[] ) { JEDEC_WREN },
+			.readcnt = 0,
+			.readarr = NULL,
+		}, {
+			.writecnt = JEDEC_BE_DC_OUTSIZE,
+			.writearr = (const unsigned char[] ) {
+				JEDEC_BE_DC,
+					(addr >> 24) & 0xff,
+					(addr >> 16) & 0xff,
+					(addr >> 8) & 0xff,
+					(addr & 0xff)
+				},
+			.readcnt = 0,
+			.readarr = NULL,
+		}, {
+			.writecnt = 0,
+			.writearr = NULL,
+			.readcnt = 0,
+			.readarr = NULL,
+		} };
+
+	result = spi_send_multicommand(flash, cmds);
+	if (result) {
+		msg_cerr("%s failed during command execution at address 0x%x\n",
+				__func__,
+				addr);
+		return result;
+	}
+	/* Wait until the Write-In-Progress bit is cleared.
+	 * This usually takes 100-4000 ms, so wait in 100 ms steps.
+	 */
+	while (spi_read_status_register(flash) & JEDEC_RDSR_BIT_WIP)
+		programmer_delay(100 * 1000);
+	/* FIXME: Check the status register for errors. */
+	return 0;
+}
+
+
 /* Sector size is usually 4k, though Macronix eliteflash has 64k */
 int spi_block_erase_20(struct flashctx *flash, unsigned int addr, unsigned int blocklen)
 {
@@ -1255,4 +1300,43 @@ int spi_aai_write(struct flashctx *flash, uint8_t *buf, unsigned int start, unsi
 	}
 
 	return 0;
+}
+
+int spi_write_extended_address(struct flashctx *flash, unsigned char addr)
+{
+	const unsigned char cmd[2] = { 0xc5, addr };
+	int ret;
+
+	ret = spi_write_enable(flash);
+	if (ret)
+		return ret;
+
+	ret = spi_send_command(flash, sizeof(cmd), 0, cmd, NULL);
+	if (ret)
+		return ret;
+
+	while (spi_read_status_register(flash) & JEDEC_RDSR_BIT_WIP)
+		programmer_delay(10);
+
+	return ret;
+}
+
+int spi_read_extended_address(struct flashctx *flash)
+{
+	static const unsigned char cmd[1] = { 0xc8 };
+
+	unsigned char ear;
+	int ret;
+
+	ret = spi_write_enable(flash);
+	if (ret) {
+		return ret;
+	}
+
+	ret = spi_send_command(flash, sizeof(cmd), sizeof(ear), cmd, &ear);
+	if (ret) {
+		return ret;
+	}
+
+	return ear;
 }

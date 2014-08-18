@@ -166,6 +166,39 @@ int spi_chip_read(struct flashctx *flash, uint8_t *buf, unsigned int start, unsi
 	return spi_programmer->read(flash, buf, addrbase + start, len);
 }
 
+int spi_chip_read_4b(struct flashctx *flash, uint8_t *buf, unsigned int start,
+			unsigned int len)
+{
+	const int chunk_size = 1 << 24;
+	int addr = spi_get_valid_read_addr(flash) + start;
+	int ret = 0;
+
+	while (len > 0) {
+		const uint8_t ear = (addr & 0xff000000) >> 24;
+		unsigned int chunk_addr = addr & 0xffffff;
+		unsigned int chunk_len = min(len, chunk_size - chunk_addr);
+
+		ret = spi_write_extended_address(flash, ear);
+		if (ret) {
+			return ret;
+		}
+
+		ret = spi_programmer->read(flash, buf,
+						chunk_addr,
+						chunk_len);
+		if (ret) {
+			return ret;
+		}
+
+		len -= chunk_len;
+		addr += chunk_len;
+		buf += chunk_len;
+	}
+
+	return ret;
+}
+
+
 /*
  * Program chip using page (256 bytes) programming.
  * Some SPI masters can't do this, they use single byte programming instead.
@@ -184,6 +217,40 @@ int spi_chip_write_256(struct flashctx *flash, uint8_t *buf, unsigned int start,
 
 	return spi_programmer->write_256(flash, buf, start, len);
 }
+
+int spi_chip_write_256_4b(struct flashctx *flash, uint8_t *buf,
+				unsigned int start,
+				unsigned int len)
+{
+	const int chunk_size = 1 << 24;
+	int addr = start;
+	int ret = 0;
+
+	while (len > 0) {
+		const uint8_t ear = (addr & 0xff000000) >> 24;
+		unsigned int chunk_addr = addr & 0xffffff;
+		unsigned int chunk_len = min(len, chunk_size - chunk_addr);
+
+		ret = spi_write_extended_address(flash, ear);
+		if (ret) {
+			return ret;
+		}
+
+		ret = spi_programmer->write_256(flash, buf,
+						chunk_addr,
+						chunk_len);
+		if (ret) {
+			return ret;
+		}
+
+		len -= chunk_len;
+		addr += chunk_len;
+		buf += chunk_len;
+	}
+
+	return ret;
+}
+
 
 /*
  * Get the lowest allowed address for read accesses. This often happens to
