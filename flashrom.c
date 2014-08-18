@@ -307,6 +307,15 @@ const struct programmer_entry programmer_table[] = {
 	},
 #endif
 
+#if CONFIG_LPC2SPI_SFC == 1
+	{
+		.name			= "lpc2spi_sfc",
+		.init			= flashrom_sfc_init,
+		.map_flash_region	= fallback_map,
+		.unmap_flash_region	= fallback_unmap,
+		.delay			= internal_delay,
+	},
+#endif
 	{}, /* This entry corresponds to PROGRAMMER_INVALID. */
 };
 

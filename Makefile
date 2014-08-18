@@ -350,6 +350,9 @@ CONFIG_DEDIPROG ?= yes
 # Always enable Marvell SATA controllers for now.
 CONFIG_SATAMV ?= yes
 
+# Disable LPC2SPI by default
+CONFIG_LPC2SPI_SFC ?= no
+
 # Disable wiki printing by default. It is only useful if you have wiki access.
 CONFIG_PRINT_WIKI ?= no
 
@@ -524,6 +527,11 @@ ifeq ($(CONFIG_SATAMV), yes)
 FEATURE_CFLAGS += -D'CONFIG_SATAMV=1'
 PROGRAMMER_OBJS += satamv.o
 NEED_PCI := yes
+endif
+
+ifeq ($(CONFIG_LPC2SPI_SFC), yes)
+FEATURE_CFLAGS += -D'CONFIG_LPC2SPI_SFC=1'
+PROGRAMMER_OBJS += sfc.o
 endif
 
 ifeq ($(NEED_SERIAL), yes)

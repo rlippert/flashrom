@@ -166,6 +166,7 @@ int spi_chip_read(struct flashctx *flash, uint8_t *buf, unsigned int start, unsi
 	return spi_programmer->read(flash, buf, addrbase + start, len);
 }
 
+
 int spi_chip_read_4b(struct flashctx *flash, uint8_t *buf, unsigned int start,
 			unsigned int len)
 {
@@ -173,6 +174,14 @@ int spi_chip_read_4b(struct flashctx *flash, uint8_t *buf, unsigned int start,
 	int addr = spi_get_valid_read_addr(flash) + start;
 	int ret = 0;
 
+	/* If the programmer supports 4 byte addresses use it directly. */
+	if (spi_programmer->feature_bits & SPI_FEAT_READ_4BA)
+	{
+		return spi_programmer->read(flash, buf, start, len);
+	}
+
+	/* Otherwise fallback to setting the EAR to access individual 16MB
+	 * regions. */
 	while (len > 0) {
 		const uint8_t ear = (addr & 0xff000000) >> 24;
 		unsigned int chunk_addr = addr & 0xffffff;
@@ -226,6 +235,14 @@ int spi_chip_write_256_4b(struct flashctx *flash, uint8_t *buf,
 	int addr = start;
 	int ret = 0;
 
+	/* If the programmer supports 4 byte addresses use it directly. */
+	if (spi_programmer->feature_bits & SPI_FEAT_WRITE_4BA)
+	{
+		return spi_programmer->write_256(flash, buf, start, len);
+	}
+
+	/* Otherwise fallback to setting the EAR to access individual 16MB
+	 * regions. */
 	while (len > 0) {
 		const uint8_t ear = (addr & 0xff000000) >> 24;
 		unsigned int chunk_addr = addr & 0xffffff;

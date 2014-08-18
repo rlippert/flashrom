@@ -90,6 +90,9 @@ enum programmer {
 #if CONFIG_LINUX_SPI == 1
 	PROGRAMMER_LINUX_SPI,
 #endif
+#if CONFIG_LPC2SPI_SFC == 1
+	PROGRAMMER_LPC2SPI_SFC,
+#endif
 	PROGRAMMER_INVALID /* This must always be the last entry. */
 };
 
@@ -557,16 +560,23 @@ enum spi_controller {
 #if CONFIG_SERPROG == 1
 	SPI_CONTROLLER_SERPROG,
 #endif
+#if CONFIG_LPC2SPI_SFC == 1
+	SPI_CONTROLLER_LPC2SPI_SFC,
+#endif
 };
 extern const int spi_programmer_count;
 
 #define MAX_DATA_UNSPECIFIED 0
 #define MAX_DATA_READ_UNLIMITED 64 * 1024
 #define MAX_DATA_WRITE_UNLIMITED 256
+
+#define SPI_FEAT_READ_4BA (1 << 0)
+#define SPI_FEAT_WRITE_4BA (1 << 1)
 struct spi_programmer {
 	enum spi_controller type;
 	unsigned int max_data_read;
 	unsigned int max_data_write;
+	unsigned int feature_bits;
 	int (*command)(const struct flashctx *flash, unsigned int writecnt, unsigned int readcnt,
 		   const unsigned char *writearr, unsigned char *readarr);
 	int (*multicommand)(const struct flashctx *flash, struct spi_command *cmds);
@@ -678,6 +688,11 @@ void register_par_programmer(const struct par_programmer *pgm, const enum chipbu
 #if CONFIG_SERPROG == 1
 int serprog_init(void);
 void serprog_delay(int usecs);
+#endif
+
+/* sfc.c */
+#if CONFIG_LPC2SPI_SFC == 1
+int flashrom_sfc_init(void);
 #endif
 
 /* serial.c */
