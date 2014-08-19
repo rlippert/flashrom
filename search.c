@@ -38,10 +38,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "flash.h"
 #include "search.h"
-
 
 /* Ceil a number to the minimum power of 2 value. For example,
  *   ceiling(2) = 2
