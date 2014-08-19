@@ -65,7 +65,7 @@
 #error Conflicting endianness #define
 #endif
 #else
-#error Little-endian PowerPC #defines are unknown
+#define __FLASHROM_LITTLE_ENDIAN__ 1
 #endif
 
 #endif
