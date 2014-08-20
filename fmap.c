@@ -51,7 +51,7 @@ int fmap_find(struct flashctx *flash, struct fmap *fmap, loff_t offset,
 	if (memcmp(&fmap->signature, FMAP_SIGNATURE, sizeof(fmap->signature)))
 		return 0;
 
-	fmap_size = sizeof(*fmap) + fmap->nareas * sizeof(struct fmap_area);
+	fmap_size = sizeof(*fmap) + le_to_cpu16(fmap->nareas) * sizeof(struct fmap_area);
 	*buf = malloc(fmap_size);
 
 	if (read_flash(flash, *buf, offset, fmap_size)) {

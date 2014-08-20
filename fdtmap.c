@@ -229,7 +229,7 @@ int fdtmap_find(struct flashctx *flash, struct fdtmap_hdr *hdr, loff_t offset,
 	msg_gdbg("%s: found possible fdtmap at offset %#lx\n",
 		 __func__, (unsigned long)offset);
 
-	fmap_size = hdr->size;
+	fmap_size = le_to_cpu32(hdr->size);
 	*buf = malloc(fmap_size);
 	msg_gdbg("%s: fdtmap size %#x\n", __func__, fmap_size);
 
@@ -251,7 +251,7 @@ int fdtmap_find(struct flashctx *flash, struct fdtmap_hdr *hdr, loff_t offset,
 	crc = crc32(0, Z_NULL, 0);
 	crc = crc32(crc, *buf, fmap_size);
 	/* Sanity check, the FDT total size should equal fmap_size */
-	if (crc != hdr->crc32) {
+	if (crc != le_to_cpu32(hdr->crc32)) {
 		msg_gdbg("[L%d] CRC32 %#08x did not match expected %#08x at %#lx\n",
 			 __LINE__, crc, hdr->crc32, (unsigned long)offset);
 		return 0;

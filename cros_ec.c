@@ -338,7 +338,7 @@ int cros_ec_prepare(uint8_t *image, int size) {
 	if (!fmap) return 0;
 
 	// Lookup RO/A/B sections in FMAP.
-	for (i = 0; i < fmap->nareas; i++) {
+	for (i = 0; i < le_to_cpu16(fmap->nareas); i++) {
 		struct fmap_area *fa = &fmap->areas[i];
 		for (j = EC_IMAGE_RO; j < ARRAY_SIZE(sections); j++) {
 			if (!strcmp(sections[j], (const char *)fa->name)) {

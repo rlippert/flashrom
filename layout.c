@@ -298,21 +298,21 @@ static int add_fmap_entries_from_buf(struct flashctx *flash,
 
 	fmap = (struct fmap *)(buf);
 
-	for (i = 0; i < fmap->nareas; i++) {
+	for (i = 0; i < le_to_cpu16(fmap->nareas); i++) {
 		if (romimages >= MAX_ROMLAYOUT) {
 			msg_gerr("ROM image contains too many regions\n");
 			return -1;
 		}
-		rom_entries[romimages].start = fmap->areas[i].offset;
+		rom_entries[romimages].start = le_to_cpu32(fmap->areas[i].offset);
 
 		/*
 		 * Flashrom rom entries use absolute addresses. So for non-zero
 		 * length entries, we need to subtract 1 from offset + size to
 		 * determine the end address.
 		 */
-		rom_entries[romimages].end = fmap->areas[i].offset +
-		                             fmap->areas[i].size;
-		if (fmap->areas[i].size)
+		rom_entries[romimages].end = le_to_cpu32(fmap->areas[i].offset) +
+		                             le_to_cpu32(fmap->areas[i].size);
+		if (le_to_cpu32(fmap->areas[i].size))
 			rom_entries[romimages].end--;
 
 		memset(rom_entries[romimages].name, 0,
