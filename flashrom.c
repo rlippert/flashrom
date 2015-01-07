@@ -314,6 +314,7 @@ const struct programmer_entry programmer_table[] = {
 		.map_flash_region	= fallback_map,
 		.unmap_flash_region	= fallback_unmap,
 		.delay			= internal_delay,
+		.probe_chip		= flashrom_sfc_probe_chip,
 	},
 #endif
 	{}, /* This entry corresponds to PROGRAMMER_INVALID. */
@@ -1170,6 +1171,15 @@ notfound:
 		 force ? "Assuming" : "Found", fill_flash->vendor,
 		 fill_flash->name, fill_flash->total_size, tmp, location);
 	free(tmp);
+
+	/* Allow the programmer to massage/override chip functionality if
+	 * necessary
+	 */
+	if (programmer_table[programmer].probe_chip) {
+		int rc = programmer_table[programmer].probe_chip(fill_flash);
+		if (rc < 0)
+			return rc;
+	}
 
 	/* Flash registers will not be mapped if the chip was forced. Lock info
 	 * may be stored in registers, so avoid lock info printing.

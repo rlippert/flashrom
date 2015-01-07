@@ -450,7 +450,10 @@ void sfc_init(struct sfc *sfc,
 #include <unistd.h>
 #include <errno.h>
 #include "chipdrivers.h"
+#include "flash.h"
 #include "programmer.h"
+#include "spi.h"
+#include "writeprotect.h"
 
 #define DEFAULT_SFC_CMD_OFFSET 0xc00
 #define DEFAULT_SFC_CMDBUF_OFFSET 0xd00
@@ -549,6 +552,141 @@ static const struct spi_programmer spi_programmer_sfc = {
 	.write_256	= flashrom_sfc_write,
 };
 
+/* log2() could be used if we link with -lm */
+static unsigned int logbase2(unsigned int x)
+{
+	unsigned int log = 0;
+
+	/* naive way */
+	while (x) {
+		x >>= 1;
+		log++;
+	}
+	return log;
+}
+
+static int sfc_wp_list_ranges(const struct flashctx *flash)
+{
+	uint32_t start, size;
+	int rc;
+	rc = flashrom_sfc.cmdreg_read(&flashrom_sfc, SFC_REG_PROTA, &start);
+	if (rc != SFC_SUCCESS)
+		return rc;
+	rc = flashrom_sfc.cmdreg_read(&flashrom_sfc, SFC_REG_PROTM, &size);
+	if (rc != SFC_SUCCESS)
+		return rc;
+
+	/* The region size is stored as a power of 2 in the lower 5 bits */
+	size &= 0x1f;
+	size = size ? (4096 * (1 << (size - 1))) : 0;
+
+	msg_pinfo("  start=0x%08x len=0x%08x\n", start, size);
+
+	return 0;
+}
+
+static int sfc_wp_set_range(const struct flashctx *flash,
+                            unsigned int start, unsigned int len)
+{
+	int rc;
+
+	/* The length must be a power of 2 between 4K and 64MB, inclusive.
+	 * The length must cleanly divide the start.
+	 */
+	if (len < 4096 || len > (64 * 1024 * 1024) ||
+	    ((len & (len - 1)) != 0) ||  /* power of 2 */
+	    (start > (64 * 1024 * 1024)) || (start % len != 0)) {
+		msg_perr("FAILED: Unsupported write protection range "
+		         "(0x%08x,0x%08x)\n\n", start, len);
+		return 1;
+	}
+
+	rc = flashrom_sfc.cmdreg_write(&flashrom_sfc, SFC_REG_PROTA, start);
+	if (rc != SFC_SUCCESS)
+		return rc;
+	rc = flashrom_sfc.cmdreg_write(&flashrom_sfc, SFC_REG_PROTM,
+				       logbase2(len / 4096));
+	if (rc != SFC_SUCCESS)
+		return rc;
+
+	return 0;
+}
+
+static int sfc_wp_enable(const struct flashctx *flash,
+		         enum wp_mode wp_mode)
+{
+	int rc;
+	uint32_t chipidconf = 0;
+
+	/* Since we are about to lock the registers, make sure the CHIPID
+	 * configuration register contains the SPI opcode that we need
+	 * in order to execute a "Read ID" command and not something malicious
+	 * like an erase or write command.
+	 * This is a little paranoid since it should already be set up
+	 * correctly when we probed the flash type before getting to this point
+	 * but better safe than sorry...
+	 */
+	chipidconf = (JEDEC_RDID << SFC_REG_CHIPIDCONF_OPCODE_SHFT) |
+		SFC_REG_CHIPIDCONF_READ |
+		(JEDEC_RDID_INSIZE << SFC_REG_CHIPIDCONF_LEN_SHFT);
+	rc = flashrom_sfc.cmdreg_write(&flashrom_sfc, SFC_REG_CHIPIDCONF,
+				       chipidconf);
+	if (rc != SFC_SUCCESS)
+		return rc;
+
+	switch (wp_mode) {
+	case WP_MODE_POWER_CYCLE:
+		rc = sfc_exec_command(&flashrom_sfc, SFC_OP_ENWRITPROT, 0);
+		break;
+	default:
+		msg_perr("%s():%d Only 'power_cycle' write-protection mode "
+			"is supported\n", __func__, __LINE__);
+		rc = 1;
+		break;
+	}
+
+	return rc;
+}
+
+static int sfc_wp_disable(const struct flashctx *flash)
+{
+	msg_perr("%s():%d Write protect disable is unavailable\n",
+	         __func__, __LINE__);
+	return 1;
+}
+
+static int sfc_wp_status(const struct flashctx *flash)
+{
+	uint32_t status;
+	int rc;
+	int enabled = 0;
+	rc = flashrom_sfc.cmdreg_read(&flashrom_sfc, SFC_REG_STATUS, &status);
+	if (rc != SFC_SUCCESS)
+		return 1;
+
+	/* Check the region write protect bit */
+	enabled = !!(status & SFC_REG_STATUS_RWP);
+
+	/* Using same format as SPI output */
+	msg_pinfo("WP: status: 0x%02x\n", enabled ? 0x80 : 0x00);
+	msg_pinfo("WP: status.srp0: %x\n", enabled);
+	msg_pinfo("WP: write protect is %s.\n",
+			enabled ? "enabled" : "disabled");
+	msg_pinfo("WP: write protect range:");
+	sfc_wp_list_ranges(flash);
+
+	return 0;
+}
+
+static struct wp sfc_wp =
+{
+	.list_ranges    = sfc_wp_list_ranges,
+	.set_range      = sfc_wp_set_range,
+	.enable         = sfc_wp_enable,
+	.disable        = sfc_wp_disable,
+	.wp_status      = sfc_wp_status,
+};
+
 /* TODO: commandline parameter? */
 static const char lpc_fw_file[] = "/sys/kernel/debug/powerpc/lpc/fw";
 
@@ -589,5 +727,12 @@ int flashrom_sfc_init(void)
 		return 1;
 
 	register_spi_programmer(&spi_programmer_sfc);
+	return 0;
+}
+
+int flashrom_sfc_probe_chip(struct flashctx *flash)
+{
+	/* Override any chip-level locking with programmer-level locking */
+	flash->wp = &sfc_wp;
 	return 0;
 }

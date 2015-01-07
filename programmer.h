@@ -122,6 +122,8 @@ struct programmer_entry {
 
 	void (*delay) (int usecs);
 
+	int (*probe_chip) (struct flashctx *flash);
+
 	/*
 	 * If set, use extra precautions such as erasing with small block sizes
 	 * and verifying more rigorously. This will incur a performance penalty
@@ -693,6 +695,7 @@ void serprog_delay(int usecs);
 /* sfc.c */
 #if CONFIG_LPC2SPI_SFC == 1
 int flashrom_sfc_init(void);
+int flashrom_sfc_probe_chip(struct flashctx *chip);
 #endif
 
 /* serial.c */

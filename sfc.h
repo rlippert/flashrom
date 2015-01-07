@@ -76,6 +76,8 @@ extern "C" {
 #define SFC_REG_CONF8_CSINACTIVEREAD_SHFT  18
 #define SFC_REG_CONF8_DUMMY_SHFT           8
 #define SFC_REG_CONF8_READOP_SHFT          0
+#define SFC_REG_PROTA     0x70 /* PROTA  : Write Protect Range Address Base */
+#define SFC_REG_PROTM     0x74 /* PROTM  : Write Protect Range Size */
 #define SFC_REG_ADRCBF    0x80 /* ADRCBF : First Intf NOR Addr Offset */
 #define SFC_REG_ADRCMF    0x84 /* ADRCMF : First Intf NOR Allocation */
 #define SFC_REG_ADRCBS    0x88 /* ADRCBS : Second Intf NOR Addr Offset */
