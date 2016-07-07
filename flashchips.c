@@ -9764,6 +9764,38 @@ const struct flashchip flashchips[] = {
 	},
 
 	{
+		.vendor = "Winbond",
+		.name = "W25Q256",
+		.bustype = BUS_SPI,
+		.manufacture_id = WINBOND_NEX_ID,
+		.model_id = 0x4019,
+		.total_size = 32768,
+		.page_size = 256,
+		.feature_bits = FEATURE_WRSR_WREN /* TODO: | FEATURE_OTP*/,
+		.tested = TEST_OK_PREW,
+		.probe = probe_spi_rdid,
+		.probe_timing = TIMING_ZERO,
+		.block_erasers =
+		{
+			{
+				.eraseblocks = { {64 * 1024, 512} },
+				.block_erase = spi_block_erase_d8,
+			}, {
+				.eraseblocks = { {32 * 1024 * 1024, 1} },
+				.block_erase = spi_block_erase_60,
+			}, {
+				.eraseblocks = { {32 * 1024 * 1024, 1} },
+				.block_erase = spi_block_erase_c7,
+			}
+		},
+		.printlock = NULL,  /* TODO */
+		.unlock = spi_disable_blockprotect,
+		.write = spi_chip_write_256_4b,
+		.read = spi_chip_read_4b,
+		.voltage = { 2700, 3600 },
+	},
+
+	{
 		.vendor		= "Winbond",
 		.name		= "W25X10",
 		.bustype	= BUS_SPI,

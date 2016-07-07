@@ -49,6 +49,7 @@ int spi_chip_write_256_4b(struct flashctx *flash, uint8_t *buf, unsigned int sta
 int spi_chip_read(struct flashctx *flash, uint8_t *buf, unsigned int start, int unsigned len);
 int spi_chip_read_4b(struct flashctx *flash, uint8_t *buf, unsigned int start, int unsigned len);
 uint8_t spi_read_status_register(const struct flashctx *flash);
+uint8_t spi_read_status_register3(const struct flashctx *flash);
 int spi_write_status_register(const struct flashctx *flash, int status);
 void spi_prettyprint_status_register_bit(uint8_t status, int bit);
 void spi_prettyprint_status_register_bp3210(uint8_t status, int bp);
@@ -64,6 +65,7 @@ int spi_write_chunked(struct flashctx *flash, uint8_t *buf, unsigned int start, 
 int spi_aai_write(struct flashctx *flash, uint8_t *buf, unsigned int start, unsigned int len);
 int spi_write_extended_address(struct flashctx *flash, unsigned char addr);
 int spi_read_extended_address(struct flashctx *flash);
+int spi_set_4b_mode(struct flashctx *flash, unsigned char mode);
 
 /* opaque.c */
 int probe_opaque(struct flashctx *flash);

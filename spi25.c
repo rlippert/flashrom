@@ -328,6 +328,20 @@ uint8_t spi_read_status_register(const struct flashctx *flash)
 	return readarr[0];
 }
 
+uint8_t spi_read_status_register3(const struct flashctx *flash)
+{
+	static const unsigned char cmd[1] = { 0x15 };
+	unsigned char readdata[1] = { 0 };
+	int ret;
+
+	/* Read Status Register 3 */
+	ret = spi_send_command(flash, sizeof(cmd), sizeof(readdata), cmd, readdata);
+	if (ret)
+		msg_cerr("RDSR failed!\n");
+
+	return readdata[0];
+}
+
 /* Prettyprint the status register. Common definitions. */
 void spi_prettyprint_status_register_welwip(uint8_t status)
 {
@@ -1339,4 +1353,10 @@ int spi_read_extended_address(struct flashctx *flash)
 	}
 
 	return ear;
+}
+int spi_set_4b_mode(struct flashctx *flash, unsigned char mode)
+{
+	unsigned char cmd[1] = { (mode == 1) ? 0xb7 : 0xe9 };
+
+	return spi_send_command(flash, sizeof(cmd), 0, cmd, NULL);
 }

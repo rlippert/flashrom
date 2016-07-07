@@ -35,6 +35,7 @@
 #include <sys/utsname.h>
 #endif
 #include <unistd.h>
+#include "chipdrivers.h"
 #include "flash.h"
 #include "flashchips.h"
 #include "layout.h"
@@ -1497,6 +1498,17 @@ static int erase_and_write_block_helper(struct flashctx *flash,
 	if (need_erase(flash, curcontents, newcontents, len, gran)) {
 		content_has_changed |= 1;
 		msg_cdbg("E");
+
+		/* Set extended address register before erase for chips larger
+		 * than 16MB */
+		if (flash->total_size > (16 * 1024)) {
+			const uint8_t ear = (start & 0xff000000) >> 24;
+			ret = spi_write_extended_address(flash, ear);
+			if (ret) {
+				return ret;
+			}
+		}
+
 		ret = erasefn(flash, start, len);
 		if (ret) {
 			if (ret == ACCESS_DENIED)
@@ -1978,6 +1990,27 @@ int chip_safety_check(struct flashctx *flash, int force, int read_it, int write_
 	return 0;
 }
 
+static int chip_check_4b_address_mode(struct flashctx *flash)
+{
+	unsigned char status3;
+	if (flash->total_size <= 16 * 1024)
+		return 0;
+
+	if ((spi_programmer->feature_bits & SPI_FEAT_READ_4BA) ||
+		(spi_programmer->feature_bits & SPI_FEAT_WRITE_4BA))
+	{
+		return 0;
+	}
+
+	status3 = spi_read_status_register3(flash);
+	if (status3 & (1 << 0)) {
+		msg_cinfo("Flash chip 4BA mode is on, disabling...\n");
+		spi_set_4b_mode(flash, 0);
+		register_chip_restore(spi_set_4b_mode, flash, 1);
+	}
+	return 0;
+}
+
 /* This function signature is horrible. We need to design a better interface,
  * but right now it allows us to split off the CLI code.
  * Besides that, the function itself is a textbook example of abysmal code flow.
@@ -1996,6 +2029,8 @@ int doit(struct flashctx *flash, int force, const char *filename, int read_it,
 		ret = 1;
 		goto out_nofree;
 	}
+
+	chip_check_4b_address_mode(flash);
 
 	/* Given the existence of read locks, we want to unlock for read,
 	 * erase and write.
